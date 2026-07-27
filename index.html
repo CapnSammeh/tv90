@@ -1501,7 +1501,49 @@ dom.videoPlayer.addEventListener('error', () => {
   }
 });
 
-dom.videoPlayer.addEventListener('ended', () => {
+dom.videoPlayer.addEventListener('ended', async () => {
+  // Auto-play next episode in the schedule
+  const chIdx = STATE.currentChannelIdx;
+  hideUpNext();
+
+  try {
+    const schedData = await apiCall(`/api/schedule?channel_idx=${chIdx}`);
+
+    if (schedData && schedData.success && schedData.current) {
+      const next = schedData.current;
+      const ep = next.episode;
+      const seekTo = next.is_live ? (next.seek_to || 0) : 0;
+      const chName = schedData.channel.channel_name;
+      const chNum = schedData.channel.channel_number;
+
+      if (ep) {
+        STATE.currentEpisode = ep;
+        dom.videoStatus.classList.add('visible');
+        dom.videoStatus.querySelector('.status-text').textContent =
+          `📡 Next: ${ep.show_name || chName} — S${String(ep.season).padStart(2,'0')}E${String(ep.episode_number).padStart(2,'0')} ${ep.name}`;
+
+        // Use pre-cached torrent if available
+        if (ep.torrent_id) {
+          await playStream(ep.torrent_id, 0, ep, chName, chNum, seekTo);
+          if (schedData.upcoming && schedData.upcoming.length > 0) showUpNext(schedData.upcoming.slice(1));
+          return;
+        }
+
+        // Fallback: search for this specific episode
+        let epUrl = `/api/random-episode?channel_idx=${chIdx}&season=${ep.season}&episode_number=${ep.episode_number}`;
+        if (ep.show_name) epUrl += `&show_name=${encodeURIComponent(ep.show_name)}`;
+        const data = await apiCall(epUrl);
+
+        if (data.success) {
+          await playStream(data.torrent_id, data.file_id || 0, ep, chName, chNum, seekTo);
+          if (schedData.upcoming && schedData.upcoming.length > 0) showUpNext(schedData.upcoming.slice(1));
+          return;
+        }
+      }
+    }
+  } catch(e) { /* fall through to guide */ }
+
+  // No more episodes — back to guide
   STATE.mode = 'guide';
   showGuide();
 });
