@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV-90 Admin</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0f0f1a; --panel:#1a1a2e; --border:#2a2a4a; --text:#e0e0e0;
+  --dim:#7a7a9a; --accent:#e94560; --green:#2ecc71; --blue:#3498db;
+  --input-bg:#12122a; --hover:#1e1e3a; --card:#1a1a30;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+header { background:var(--panel); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:12px; position:sticky;top:0;z-index:10; }
+header h1 { font-size:17px; color:var(--accent); }
+header .spacer { flex:1; }
+header .badge { font-size:11px; padding:3px 10px; border-radius:10px; border:1px solid var(--border); }
+header .badge.ok { color:var(--green); border-color:var(--green); }
+header .badge.warn { color:var(--accent); border-color:var(--accent); }
+header a { color:var(--dim); text-decoration:none; font-size:13px; }
+header a:hover { color:var(--text); }
+
+.btn { padding:7px 16px; border:1px solid var(--border); border-radius:5px; background:var(--input-bg); color:var(--text); cursor:pointer; font-size:12px; transition:all .15s; }
+.btn:hover { background:var(--hover); }
+.btn.accent { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.green { background:var(--green); border-color:var(--green); color:#000; }
+.btn.blue { background:var(--blue); border-color:var(--blue); color:#fff; }
+.btn.danger { border-color:#e74c3c; color:#e74c3c; }
+.btn.danger:hover { background:#e74c3c; color:#fff; }
+.btn.sm { padding:4px 10px; font-size:11px; }
+
+.layout { display:flex; height:calc(100vh - 49px); }
+.sidebar { width:260px; background:var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-hd { padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.sidebar-hd h2 { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); flex:1; }
+.ch-list { flex:1; overflow-y:auto; padding:4px 0; }
+.ch-item { display:flex; align-items:center; padding:9px 14px; cursor:pointer; gap:8px; border-left:3px solid transparent; transition:.1s; font-size:13px; }
+.ch-item:hover { background:rgba(255,255,255,.03); }
+.ch-item.active { background:rgba(233,69,96,.08); border-left-color:var(--accent); }
+.ch-item .num { width:28px; height:22px; background:var(--bg); border:1px solid var(--border); border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:var(--dim); flex-shrink:0; }
+.ch-item.active .num { color:var(--accent); border-color:var(--accent); }
+.ch-item .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ch-item .tag { font-size:9px; padding:1px 6px; border-radius:8px; background:var(--blue); color:#fff; flex-shrink:0; }
+
+.main { flex:1; overflow-y:auto; padding:20px 28px; }
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--dim); gap:8px; }
+.empty .icon { font-size:42px; }
+
+.panel { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:20px; max-width:750px; }
+.panel h3 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin-bottom:14px; }
+.form-row { display:flex; gap:12px; margin-bottom:12px; }
+.form-row > * { flex:1; }
+.fg { margin-bottom:12px; }
+.fg label { display:block; font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.fg input { width:100%; padding:8px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:13px; outline:none; }
+.fg input:focus { border-color:var(--accent); }
+
+.search-box { display:flex; gap:8px; margin-bottom:8px; }
+.search-box input { flex:1; }
+.search-results { max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; margin-bottom:8px; }
+.sr-item { display:flex; align-items:center; padding:10px 14px; gap:10px; cursor:pointer; border-bottom:1px solid var(--border); font-size:13px; transition:.1s; }
+.sr-item:last-child { border-bottom:none; }
+.sr-item:hover { background:rgba(255,255,255,.03); }
+.sr-item .sr-year { color:var(--dim); font-size:11px; margin-left:auto; }
+.sr-item .sr-add { color:var(--green); font-weight:bold; font-size:16px; flex-shrink:0; }
+
+.show-list { border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.show-row { display:flex; align-items:center; padding:8px 12px; gap:8px; border-bottom:1px solid var(--border); font-size:13px; }
+.show-row:last-child { border-bottom:none; }
+.show-row:hover { background:rgba(255,255,255,.02); }
+.show-row .show-name { flex:1; }
+.show-row .show-id { color:var(--dim); font-size:10px; font-family:monospace; }
+
+.toast { position:fixed; bottom:20px; right:20px; padding:10px 18px; border-radius:6px; font-size:13px; z-index:200; animation:up .3s; }
+.toast.ok { background:var(--green); color:#000; }
+.toast.err { background:#e74c3c; color:#fff; }
+@keyframes up { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+.spin { width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.hidden { display:none !important; }
+.text-dim { color:var(--dim); font-size:12px; }
+.mt-8 { margin-top:8px; }
+.mb-8 { margin-bottom:8px; }
+.note { font-size:11px; color:var(--dim); line-height:1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📺 TV-90 Admin</h1>
+  <span class="spacer"></span>
+  <span class="badge warn" id="keyBadge">⚙ No Keys</span>
+  <a href="/" target="_blank">Open Player →</a>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-hd"><h2>Channels</h2><button class="btn sm accent" onclick="addChannel()">+ Add</button></div>
+    <div class="ch-list" id="chList"></div>
+  </div>
+
+  <div class="main" id="mainPanel">
+    <div class="empty" id="emptyState">
+      <div class="icon">📡</div>
+      <div>Select a channel or add a new one</div>
+    </div>
+
+    <div class="hidden" id="editor">
+      <div class="panel">
+        <h3>🔑 API Keys (saved once, persist forever)</h3>
+        <div class="form-row">
+          <div class="fg"><label>TorBox API Key</label><input type="password" id="tbKey" placeholder="TorBox API key..."></div>
+          <div class="fg"><label>TVDB API Key</label><input type="password" id="tvKey" placeholder="thetvdb.com/api-information"></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Jackett URL (optional)</label><input type="text" id="jackettUrl" placeholder="http://localhost:9117"></div>
+          <div class="fg"><label>Jackett API Key</label><input type="password" id="jackettKey" placeholder="Jackett dashboard"></div>
+        </div>
+        <button class="btn blue" onclick="saveKeys()">Save Keys</button>
+      </div>
+
+      <div class="panel">
+        <h3>📺 Channel</h3>
+        <div class="form-row">
+          <div class="fg" style="max-width:80px"><label>Number</label><input type="number" id="chNum" min="1"></div>
+          <div class="fg"><label>Name</label><input type="text" id="chName"></div>
+          <div class="fg" style="max-width:70px"><label>Logo</label><input type="text" id="chLogo" maxlength="2"></div>
+        </div>
+        <div class="form-row hidden" id="seasonRow">
+          <div class="fg" style="max-width:150px"><label>Season filter</label><input type="number" id="seasonFilter" min="1" placeholder="All seasons"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>📋 Shows</h3>
+        <div class="search-box">
+          <input type="text" id="tvdbSearch" placeholder="Search TVDB for a show..."
+                 onkeydown="if(event.key==='Enter')searchTVDB()">
+          <button class="btn blue sm" onclick="searchTVDB()">Search</button>
+        </div>
+        <div class="search-results hidden" id="tvdbResults"></div>
+        <div class="show-list" id="showListEl"></div>
+        <div class="note mt-8">
+          Episodes from all shows are shuffled together when you generate a schedule.
+        </div>
+      </div>
+
+      <div class="panel" id="schedulePanel" style="display:none;">
+        <h3>📡 Schedule</h3>
+        <div style="margin-bottom:10px;">
+          <button class="btn sm blue" onclick="generateSchedule()">🔄 Generate Schedule</button>
+          <button class="btn sm blue" onclick="precacheEpisodes()" style="margin-left:6px;">📥 Pre-cache</button>
+        </div>
+        <div id="scheduleCurrent" class="mb-8"></div>
+        <div id="scheduleUpcoming"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn green" onclick="saveAll()">💾 Save All</button>
+        <button class="btn danger sm" onclick="deleteChannel()">Delete Channel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let config = { channels: [] };
+let keys = { torbox_api_key:'', tvdb_api_key:'', jackett_url:'', jackett_api_key:'' };
+let selCh = -1;
+const $=s=>document.querySelector(s);
+
+async function init(){ await loadAll(); renderAll(); }
+init();
+
+async function loadAll(){
+  try{
+    const r=await fetch('/api/admin/config');
+    const d=await r.json();
+    config.channels=d.channels||[];
+    keys.torbox_api_key=d.torbox_api_key||'';
+    keys.tvdb_api_key=d.tvdb_api_key||'';
+    keys.jackett_url=d.jackett_url||'';
+    keys.jackett_api_key=d.jackett_api_key||'';
+  }catch(e){toast('Failed to load config',true)}
+}
+
+async function saveConfig(){
+  const r=await fetch('/api/admin/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:config.channels})});
+  return (await r.json()).success;
+}
+
+async function saveKeysAPI(){
+  const r=await fetch('/api/admin/save-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(keys)});
+  return (await r.json()).success;
+}
+
+async function searchTVDB(){
+  const q=$('#tvdbSearch').value.trim();
+  if(!q)return;
+  const box=$('#tvdbResults');
+  box.classList.remove('hidden');
+  box.innerHTML='<div class="text-dim" style="padding:16px;text-align:center;"><span class="spin"></span> Searching...</div>';
+  try{
+    const r=await fetch(`/api/tvdb/search?query=${encodeURIComponent(q)}`);
+    const d=await r.json();
+    if(!d.data||!d.data.length){box.innerHTML='<div class="text-dim" style="padding:16px;text-align:center;">No results</div>';return;}
+    const rawName = s.name || (s.translations && s.translations.eng) || 'Unknown';
+    box.innerHTML=d.data.map(s=>{
+      const name = s.name || (s.translations && s.translations.eng) || 'Unknown';
+      return `
+      <div class="sr-item" data-tvdb="${s.tvdb_id}" data-name="${name.replace(/"/g,'&quot;')}">
+        <span>${esc(name)}</span>
+        <span class="sr-year">${s.year||''}</span>
+        <span class="sr-add">+</span>
+      </div>`;
+    }).join('');
+    // Delegated click: no inline onclick = no escaping bugs
+    box.querySelectorAll('.sr-item').forEach(el => {
+      el.addEventListener('click', () => addShow(parseInt(el.dataset.tvdb), el.dataset.name));
+    });
+  }catch(e){box.innerHTML='<div class="text-dim" style="padding:16px;text-align:center;">Search failed. TVDB key set?</div>';}
+}
+
+function renderAll(){ renderSidebar(); renderKeys(); if(selCh>=0&&selCh<config.channels.length)renderEditor(); updateBadges(); }
+
+function renderSidebar(){
+  $('#chList').innerHTML=config.channels.map((ch,i)=>{
+    const count=(ch.shows||[]).length;
+    return `<div class="ch-item ${i===selCh?'active':''}" onclick="selectChannel(${i})">
+      <div class="num">${String(ch.number||i+1).padStart(2,'0')}</div>
+      <div class="nm">${esc(ch.name||'Unnamed')}</div>
+      ${count?`<span class="tag">${count}</span>`:''}
+      ${(ch.shows&&ch.shows.length)?'<span class="tag">📡</span>':''}
+    </div>`;
+  }).join('');
+  if(!config.channels.length)$('#chList').innerHTML='<div style="padding:20px;color:var(--dim);text-align:center;font-size:11px;">No channels.<br>Click + Add</div>';
+}
+
+function renderKeys(){
+  $('#tbKey').value=keys.torbox_api_key||'';
+  $('#tvKey').value=keys.tvdb_api_key||'';
+  $('#jackettUrl').value=keys.jackett_url||'';
+  $('#jackettKey').value=keys.jackett_api_key||'';
+}
+
+function renderEditor(){
+  const ch=config.channels[selCh];
+  if(!ch)return;
+  $('#emptyState').classList.add('hidden');
+  $('#editor').classList.remove('hidden');
+  $('#chNum').value=ch.number||selCh+1;
+  $('#chName').value=ch.name||'';
+  $('#chLogo').value=ch.logo||'';
+  $('#seasonFilter').value=ch.season_filter||'';
+  renderShowList();
+}
+
+function renderShowList(){
+  const ch=config.channels[selCh];
+  if(!ch)return;
+  const shows=ch.shows||[];
+  if(!shows.length){$('#showListEl').innerHTML='<div style="padding:16px;color:var(--dim);text-align:center;font-size:12px;">No shows yet. Search above to add.</div>';return;}
+  $('#showListEl').innerHTML=shows.map((s,i)=>`
+    <div class="show-row">
+      <span class="show-name">${esc(s.name)}</span>
+      <span class="show-id">TVDB #${s.tvdb_id}</span>
+      <button class="btn danger sm" onclick="removeShow(${i})">✕</button>
+    </div>`).join('');
+}
+
+function updateBadges(){
+  const b=$('#keyBadge');
+  const hT=keys.torbox_api_key&&keys.torbox_api_key.length>5;
+  const hV=keys.tvdb_api_key&&keys.tvdb_api_key.length>5;
+  b.textContent=(hT&&hV)?'🔑 Ready':(hT||hV)?'⚠ Partial Keys':'⚙ No Keys';
+  b.className='badge '+(hT&&hV?'ok':'warn');
+}
+
+function selectChannel(i){
+  selCh=i;
+  $('#tvdbResults').classList.add('hidden');
+  $('#tvdbResults').innerHTML='';
+  $('#tvdbSearch').value='';
+  renderAll();
+  loadSchedule();
+}
+
+function addChannel(){
+  config.channels.push({number:config.channels.length+1,name:'New Channel',logo:'NC',shows:[],season_filter:null});
+  selCh=config.channels.length-1;
+  $('#tvdbResults').classList.add('hidden');
+  $('#tvdbResults').innerHTML='';
+  $('#schedulePanel').style.display='none';
+  $('#scheduleCurrent').innerHTML='';
+  $('#scheduleUpcoming').innerHTML='';
+  renderAll();
+  loadSchedule();
+}
+
+function deleteChannel(){
+  if(selCh<0)return;
+  if(!confirm(`Delete "${config.channels[selCh].name}"?`))return;
+  config.channels.splice(selCh,1);
+  selCh=Math.min(selCh,config.channels.length-1);
+  if(!config.channels.length){
+    selCh=-1;
+    $('#editor').classList.add('hidden');
+    $('#emptyState').classList.remove('hidden');
+    $('#schedulePanel').style.display='none';
+  }
+  $('#tvdbResults').classList.add('hidden');
+  $('#tvdbResults').innerHTML='';
+  renderAll();
+  if(selCh>=0)loadSchedule();
+}
+
+function addShow(tvdbId,name){
+  if(selCh<0)return;
+  const ch=config.channels[selCh];
+  if(!ch.shows)ch.shows=[];
+  if(ch.shows.some(s=>s.tvdb_id===tvdbId)){toast('Already added',true);return;}
+  ch.shows.push({tvdb_id:tvdbId,name:name});
+  renderShowList();
+  $('#tvdbResults').classList.add('hidden');
+  $('#tvdbSearch').value='';
+  toast(`✅ Added ${name}`);
+}
+
+function removeShow(idx){
+  if(selCh<0)return;
+  config.channels[selCh].shows.splice(idx,1);
+  renderShowList();
+}
+
+async function saveKeys(){
+  keys.torbox_api_key=$('#tbKey').value.trim();
+  keys.tvdb_api_key=$('#tvKey').value.trim();
+  keys.jackett_url=$('#jackettUrl').value.trim();
+  keys.jackett_api_key=$('#jackettKey').value.trim();
+  if(await saveKeysAPI()){toast('✅ Keys saved!');updateBadges();}
+  else toast('Failed to save keys',true);
+}
+
+async function saveAll(){
+  if(selCh<0)return;
+  const ch=config.channels[selCh];
+  ch.number=parseInt($('#chNum').value)||ch.number;
+  ch.name=$('#chName').value.trim()||'Unnamed';
+  ch.logo=($('#chLogo').value||'').substring(0,2)||'??';
+  const sf=$('#seasonFilter').value.trim();
+  ch.season_filter=sf?parseInt(sf):null;
+  if(await saveConfig()){toast('💾 Saved!');renderAll();}
+  else toast('Save failed',true);
+}
+
+function esc(s){if(!s)return'';const e=document.createElement('span');e.textContent=s;return e.innerHTML;}
+
+function toast(msg,err){
+  const t=document.createElement('div');
+  t.className='toast '+(err?'err':'ok');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+async function loadSchedule(){
+  if(selCh<0)return;
+  const panel=$('#schedulePanel');
+  panel.style.display='none';
+  $('#scheduleCurrent').innerHTML='';
+  $('#scheduleUpcoming').innerHTML='';
+  try{
+    const r=await fetch(`/api/schedule?channel_idx=${selCh}`);
+    const d=await r.json();
+    if(!d.success||!d.channel||!d.channel.episodes){
+      panel.style.display='block';
+      $('#scheduleCurrent').innerHTML='<div class="text-dim">No schedule yet — click Generate Schedule</div>';
+      return;
+    }
+    panel.style.display='block';
+    const cur=d.current;
+    if(cur&&cur.is_live){
+      const ep=cur.episode;
+      const m=Math.floor(cur.seek_to/60);
+      $('#scheduleCurrent').innerHTML=`<div style="background:rgba(46,204,113,0.1);border:1px solid var(--green);border-radius:6px;padding:10px 14px;">
+        <span style="color:var(--green);font-weight:bold;">▶ LIVE NOW</span>
+        <span style="color:var(--dim);font-size:11px;margin-left:8px;">${m}m ${cur.seek_to%60}s in</span>
+        <div style="font-size:14px;margin-top:4px;">${esc(ep.show_name||'')} — S${String(ep.season).padStart(2,'0')}E${String(ep.episode_number).padStart(2,'0')} ${esc(ep.name)}</div>
+      </div>`;
+    }else if(cur&&cur.starts_in){
+      const m=Math.floor(cur.starts_in/60);
+      $('#scheduleCurrent').innerHTML=`<div style="background:rgba(52,152,219,0.1);border:1px solid var(--blue);border-radius:6px;padding:10px 14px;">
+        <span style="color:var(--blue);">⏳ Up next in ${m}m</span>
+        <div style="font-size:14px;margin-top:4px;">${esc(cur.episode.show_name||'')} — S${String(cur.episode.season).padStart(2,'0')}E${String(cur.episode.episode_number).padStart(2,'0')} ${esc(cur.episode.name)}</div>
+      </div>`;
+    }else{
+      $('#scheduleCurrent').innerHTML='<div class="text-dim">No schedule yet — click Generate Schedule</div>';
+    }
+    const up=d.upcoming||[];
+    if(up.length){
+      $('#scheduleUpcoming').innerHTML='<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Coming Up</div>'+
+        up.slice(0,10).map(e=>{
+          const t=new Date(e.starts_at*1000);
+          const cached=e.torrent_id?' ✅':'';
+          return `<div style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">
+            <span style="color:var(--dim);width:50px;flex-shrink:0;font-family:monospace;font-size:11px;">${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+            <span style="color:var(--dim);font-size:10px;margin-right:4px;">${esc((e.show_name||'').substring(0,12))}</span>
+            <span>S${String(e.season).padStart(2,'0')}E${String(e.episode_number).padStart(2,'0')}</span>
+            <span style="margin-left:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(e.name)}</span>
+            <span style="color:var(--green);font-size:10px;flex-shrink:0;">${cached}</span>
+          </div>`;
+        }).join('');
+    }
+  }catch(e){}
+}
+
+async function generateSchedule(){
+  if(selCh<0)return;
+  try{
+    const r=await fetch(`/api/schedule/generate?channel_idx=${selCh}`);
+    const d=await r.json();
+    if(d.success){toast(`✅ ${d.detail}`);loadSchedule();}
+    else toast(d.detail||'Failed',true);
+  }catch(e){toast('Failed',true)}
+}
+
+async function precacheEpisodes(){
+  if(selCh<0)return;
+  toast('📥 Pre-caching...');
+  try{
+    const r=await fetch(`/api/schedule/precache?channel_idx=${selCh}&count=10`);
+    const d=await r.json();
+    if(d.success){toast(`✅ ${d.detail}`);loadSchedule();}
+    else toast(d.detail||'Failed',true);
+  }catch(e){toast('Failed',true)}
+}
+</script>
+</body>
+</html>

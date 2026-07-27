@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>📺 TV-90</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+<style>
+/* ═══════════════════════════════════════════
+   90's CRT TV — Full Experience
+   ═══════════════════════════════════════════ */
+
+:root {
+  --crt-bg: #0a0a0a;
+  --crt-text: #00ff41;
+  --crt-dim: #008833;
+  --channel-bar-bg: #111;
+  --guide-bg: rgba(0,0,0,0.92);
+  --highlight: #ff6b35;
+}
+
+@font-face {
+  font-family: 'CRT';
+  src: local('Courier New'), local('monospace');
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+  font-family: 'CRT', 'Courier New', monospace;
+  user-select: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ── CRT Screen (fills viewport, no bezel) ── */
+.crt-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--crt-bg);
+  overflow: hidden;
+  box-shadow: inset 0 0 150px rgba(0,0,0,0.7);
+}
+
+/* Scanlines */
+.crt-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.15) 0px,
+    rgba(0,0,0,0.15) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Phosphor glow */
+.crt-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0,0,0,0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 101;
+}
+
+/* ── Screen Content Area ── */
+.screen-content {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Channel Display (top-right corner) ── */
+.channel-display {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 50;
+  background: rgba(0,0,0,0.85);
+  border: 2px solid var(--crt-text);
+  border-radius: 4px;
+  padding: 6px 14px;
+  color: var(--crt-text);
+  font-size: 28px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px var(--crt-text), 0 0 20px var(--crt-text);
+  letter-spacing: 4px;
+  box-shadow: 0 0 15px rgba(0,255,65,0.3);
+  transition: all 0.3s;
+}
+
+.channel-display.changing {
+  animation: channelFlicker 0.4s ease-out;
+}
+
+@keyframes channelFlicker {
+  0%   { opacity: 0; transform: scale(1.3); }
+  30%  { opacity: 0.6; transform: scale(0.9); }
+  60%  { opacity: 0.3; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Now Playing Bar ── */
+.now-playing {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: linear-gradient(transparent, rgba(0,0,0,0.95));
+  padding: 40px 24px 16px;
+  color: #ccc;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  transition: opacity 0.4s;
+}
+
+.now-playing .show-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.now-playing .channel-badge {
+  background: var(--highlight);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* ── Channel Guide Overlay ── */
+.channel-guide {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: var(--guide-bg);
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.3s;
+}
+
+.guide-header {
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid #333;
+  color: var(--crt-text);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 8px var(--crt-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.guide-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--crt-text);
+  border-radius: 4px;
+  color: var(--crt-text);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-shadow: 0 0 4px var(--crt-text);
+  transition: all 0.15s;
+}
+.guide-btn:hover,
+.guide-btn:focus-visible {
+  background: rgba(0,255,65,0.15);
+  outline: 2px solid var(--crt-text);
+  outline-offset: 2px;
+}
+
+.guide-channels {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.channel-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 24px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  gap: 16px;
+}
+
+.channel-row:hover,
+.channel-row.selected {
+  background: rgba(255,255,255,0.05);
+  border-left-color: var(--crt-text);
+}
+
+.channel-row.selected {
+  background: rgba(0,255,65,0.08);
+  box-shadow: inset 0 0 30px rgba(0,255,65,0.05);
+}
+
+.channel-number {
+  width: 48px;
+  height: 36px;
+  background: #000;
+  border: 1px solid var(--crt-text);
+  color: var(--crt-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 8px var(--crt-text);
+  flex-shrink: 0;
+  font-family: 'Courier New', monospace;
+}
+
+.channel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-name {
+  color: var(--crt-text);
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.channel-current-show {
+  color: #888;
+  font-size: 12px;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-next-show {
+  color: #555;
+  font-size: 10px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-shows-count {
+  color: #555;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ── Show Browser (when channel selected) ── */
+.show-browser {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  background: var(--guide-bg);
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.25s;
+}
+
+.browser-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.browser-back {
+  color: var(--crt-text);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid var(--crt-text);
+  border-radius: 3px;
+  background: transparent;
+  font-family: inherit;
+  text-transform: uppercase;
+}
+
+.browser-back:hover {
+  background: rgba(0,255,65,0.1);
+}
+
+.browser-title {
+  color: var(--crt-text);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.show-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.show-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+  gap: 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.show-item:hover,
+.show-item.selected {
+  background: rgba(255,255,255,0.05);
+  border-left-color: var(--highlight);
+}
+
+.show-item.selected {
+  background: rgba(255,107,53,0.1);
+}
+
+.show-item .play-icon {
+  color: var(--highlight);
+  font-size: 20px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.show-item.selected .play-icon {
+  opacity: 1;
+}
+
+.show-item .show-name {
+  color: #ddd;
+  font-size: 14px;
+  flex: 1;
+}
+
+.show-item.selected .show-name {
+  color: #fff;
+}
+
+/* ── Video Player ── */
+.video-container {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.video-overlay.visible {
+  opacity: 1;
+}
+
+.video-overlay .status-text {
+  color: var(--crt-text);
+  font-size: 18px;
+  text-shadow: 0 0 10px var(--crt-text);
+}
+
+/* ── Static / Noise Transition ── */
+.static-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+.static-overlay.active {
+  opacity: 0.7;
+  animation: staticNoise 0.05s infinite;
+}
+
+@keyframes staticNoise {
+  0%   { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  50%  { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+}
+
+/* ── Loading spinner ── */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #333;
+  border-top-color: var(--crt-text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error state ── */
+.error-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 95;
+  background: rgba(200,30,30,0.9);
+  color: #fff;
+  padding: 12px 24px;
+  font-size: 13px;
+  text-align: center;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Help footer ── */
+.help-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  color: #444;
+  font-size: 10px;
+  display: flex;
+  gap: 16px;
+  opacity: 0.6;
+}
+
+.help-bar kbd {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 2px;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 10px;
+}
+
+/* ── Power off / on animation ── */
+.power-off {
+  animation: powerOff 0.6s ease-in forwards;
+}
+
+.power-on {
+  animation: powerOn 0.8s ease-out;
+}
+
+@keyframes powerOff {
+  0%   { filter: brightness(1); transform: scaleY(1); }
+  50%  { filter: brightness(3); transform: scaleY(0.001); }
+  100% { filter: brightness(0); transform: scaleY(0); }
+}
+
+@keyframes powerOn {
+  0%   { filter: brightness(0); transform: scaleY(0.001); }
+  40%  { filter: brightness(3); transform: scaleY(1); }
+  70%  { filter: brightness(0.8); }
+  100% { filter: brightness(1); transform: scaleY(1); }
+}
+
+/* ── Hidden utility ── */
+.hidden { display: none !important; }
+
+/* ── Overlay auto-hide: idle state fades overlays ── */
+.now-playing,
+#upNext,
+.channel-display,
+.help-bar {
+  transition: opacity 0.3s ease;
+}
+#crtScreen.idle .now-playing,
+#crtScreen.idle #upNext,
+#crtScreen.idle .channel-display,
+#crtScreen.idle .help-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+#crtScreen.idle .now-playing,
+#crtScreen.idle #upNext {
+  transition: opacity 2s ease-out;
+}
+#crtScreen.idle .channel-display,
+#crtScreen.idle .help-bar {
+  transition: opacity 0.6s ease-out;
+}
+
+/* ── D-Pad / TV Remote Focus Styles ── */
+.channel-row:focus-visible,
+.show-item:focus-visible {
+  outline: 2px solid var(--crt-text);
+  outline-offset: -2px;
+  box-shadow: 0 0 12px rgba(0,255,65,0.4);
+  background: rgba(0,255,65,0.08);
+}
+.channel-row:focus-visible {
+  border-left-color: var(--crt-text);
+}
+.video-container:focus-visible {
+  outline: none;
+}
+
+/* ── TV Guide Grid ── */
+.tv-guide {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Courier New', monospace;
+}
+.guide-timeline-header {
+  height: 28px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  position: relative;
+  flex-shrink: 0;
+  padding-left: 100px;
+}
+.guide-timeline-header .time-marker {
+  position: absolute;
+  top: 4px;
+  color: #666;
+  font-size: 10px;
+  transform: translateX(-50%);
+}
+.guide-channels-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+.guide-row {
+  display: flex;
+  border-bottom: 1px solid #1a1a1a;
+  height: 48px;
+  position: relative;
+  cursor: pointer;
+}
+.guide-row:hover { background: rgba(255,255,255,0.02); }
+.guide-row.selected { background: rgba(233,69,96,0.1); }
+.guide-row .ch-label {
+  width: 100px;
+  flex-shrink: 0;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  border-right: 1px solid #222;
+  font-size: 12px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.guide-row .ch-label .ch-num {
+  color: var(--crt-text);
+  font-weight: bold;
+  font-size: 13px;
+}
+.guide-row .ch-label .ch-name {
+  color: #aaa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.guide-row .ch-timeline {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  min-width: 3600px; /* 1 hour = 3600px = 1px per second */
+}
+.guide-show-block {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: rgba(52,152,219,0.25);
+  border: 1px solid rgba(52,152,219,0.4);
+  border-radius: 3px;
+  padding: 4px 6px;
+  overflow: hidden;
+  font-size: 10px;
+  color: #ccc;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.guide-show-block:hover { background: rgba(52,152,219,0.4); }
+.guide-show-block.live {
+  background: rgba(46,204,113,0.3);
+  border-color: rgba(46,204,113,0.5);
+}
+.guide-show-block.live:hover { background: rgba(46,204,113,0.45); }
+.guide-show-block .block-title {
+  font-weight: bold;
+  font-size: 11px;
+}
+.guide-show-block .block-ep {
+  color: #999;
+  font-size: 9px;
+}
+.guide-now-line {
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 0 6px var(--accent);
+}
+.guide-help {
+  height: 24px;
+  background: #111;
+  border-top: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-size: 10px;
+  color: #444;
+  flex-shrink: 0;
+}
+.guide-help kbd {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 2px;
+  padding: 0 4px;
+  font-family: inherit;
+  color: #666;
+}
+</style>
+</head>
+<body>
+
+<div class="crt-screen" id="crtScreen">
+
+    <!-- Channel Number Display -->
+    <div class="channel-display" id="channelDisplay">CH 01</div>
+
+    <!-- Static/Noise Overlay -->
+    <div class="static-overlay" id="staticOverlay"></div>
+
+    <!-- Channel Guide -->
+    <div class="channel-guide hidden" id="channelGuide">
+      <div class="guide-header">
+        📡 Channel Guide
+        <button class="guide-btn" id="guideBtn" tabindex="0"
+                onclick="showTVGuide()" onkeydown="if(event.key==='Enter')showTVGuide()">
+          📺 TV Guide
+        </button>
+      </div>
+      <div class="guide-channels" id="guideChannels"></div>
+    </div>
+
+    <!-- Show Browser -->
+    <div class="show-browser hidden" id="showBrowser">
+      <div class="browser-header">
+        <div class="browser-title" id="browserTitle">Shows</div>
+      </div>
+      <div class="show-list" id="showList"></div>
+    </div>
+
+    <!-- Video Player -->
+    <div class="video-container hidden" id="videoContainer">
+      <video id="videoPlayer" controls crossorigin="anonymous"></video>
+      <div class="video-overlay visible" id="videoStatus">
+        <div class="loading-spinner"></div>
+        <div class="status-text">Tuning in...</div>
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner hidden" id="errorBanner"></div>
+
+    <!-- Now Playing -->
+    <div class="now-playing hidden" id="nowPlaying">
+      <span class="channel-badge" id="npChannel">CH 01</span>
+      <span class="show-title" id="npTitle"></span>
+    </div>
+
+    <!-- Help Bar -->
+    <div class="help-bar" id="helpBar">
+      <span><kbd>↑↓</kbd> Channel</span>
+      <span><kbd>←→</kbd> Shows</span>
+      <span><kbd>↵ Enter</kbd> Play</span>
+      <span><kbd>⌫ Back</kbd></span>
+      <span><kbd>G</kbd> Guide</span>
+    </div>
+
+    <!-- TV Guide Overlay -->
+    <div class="tv-guide hidden" id="tvGuide">
+      <div class="guide-timeline-header" id="guideTimeline"></div>
+      <div class="guide-channels-scroll" id="guideChannelsScroll">
+        <div id="guideRows"></div>
+        <div class="guide-now-line" id="guideNowLine"></div>
+      </div>
+      <div class="guide-help">
+        <span><kbd>↑↓</kbd> Channel</span>
+        <span><kbd>←→</kbd> Scroll time</span>
+        <span><kbd>Enter</kbd> Tune in</span>
+        <span><kbd>G</kbd> Channels</span>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+/* ═══════════════════════════════════════════
+   tv90 — Remote Control Navigation
+   ═══════════════════════════════════════════ */
+
+const STATE = {
+  channels: [],
+  currentChannelIdx: 0,
+  currentShowIdx: 0,
+  mode: 'guide',       // 'guide' | 'browser' | 'playing' | 'loading'
+  streamUrl: null,
+  currentEpisode: null,
+  hasTorboxKey: false,
+  hasTvdbKey: false,
+  idleTimer: null,
+};
+
+// ── DOM Refs ──
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const dom = {
+  channelDisplay: $('#channelDisplay'),
+  staticOverlay: $('#staticOverlay'),
+  channelGuide: $('#channelGuide'),
+  guideChannels: $('#guideChannels'),
+  showBrowser: $('#showBrowser'),
+  browserTitle: $('#browserTitle'),
+  showList: $('#showList'),
+  videoContainer: $('#videoContainer'),
+  videoPlayer: $('#videoPlayer'),
+  videoStatus: $('#videoStatus'),
+  errorBanner: $('#errorBanner'),
+  nowPlaying: $('#nowPlaying'),
+  npChannel: $('#npChannel'),
+  npTitle: $('#npTitle'),
+  helpBar: $('#helpBar'),
+};
+
+// ── API ──
+async function apiCall(endpoint) {
+  const resp = await fetch(endpoint);
+  return resp.json();
+}
+
+async function loadChannels() {
+  try {
+    const data = await apiCall('/api/channels');
+    STATE.hasTorboxKey = data.has_torbox_key;
+    STATE.hasTvdbKey = data.has_tvdb_key;
+    STATE.channels = data.channels || [];
+    if (STATE.channels.length === 0) {
+      showError('No channels configured. Go to /admin to set up your channels!');
+    }
+    renderGuide();
+  } catch (e) {
+    showError('Failed to load channels. Is the server running?');
+  }
+}
+
+async function playFromSchedule(channelIdx) {
+  STATE.mode = 'loading';
+  STATE.currentEpisode = null;
+  showVideoPlayer();
+  dom.videoStatus.classList.add('visible');
+  dom.videoStatus.querySelector('.status-text').textContent = '📡 Checking schedule...';
+
+  try {
+    // Fetch schedule (auto-generates if missing)
+    let schedData = await apiCall(`/api/schedule?channel_idx=${channelIdx}`);
+
+    if (!schedData || !schedData.success) {
+      throw new Error('No schedule available. Generate one in /admin first.');
+    }
+
+    let episodeInfo, seekTo = 0, torrentId = null;
+
+    if (schedData.current && schedData.current.is_live) {
+      // Episode is currently airing — tune in mid-episode
+      const cur = schedData.current;
+      episodeInfo = cur.episode;
+      seekTo = cur.seek_to || 0;
+      torrentId = cur.episode.torrent_id || null;
+      dom.videoStatus.querySelector('.status-text').textContent =
+        `📡 Tuning in: S${String(episodeInfo.season).padStart(2,'0')}E${String(episodeInfo.episode_number).padStart(2,'0')} — ${episodeInfo.name}`;
+
+    } else if (schedData.current && schedData.current.starts_in) {
+      // Between episodes — play the next one from the start
+      const cur = schedData.current;
+      episodeInfo = cur.episode;
+      seekTo = 0;
+      torrentId = cur.episode.torrent_id || null;
+      dom.videoStatus.querySelector('.status-text').textContent =
+        `📡 Next up: S${String(episodeInfo.season).padStart(2,'0')}E${String(episodeInfo.episode_number).padStart(2,'0')} — ${episodeInfo.name}`;
+
+    } else {
+      // Schedule exists but no current/upcoming — regenerate
+      await apiCall(`/api/schedule/generate?channel_idx=${channelIdx}`);
+      schedData = await apiCall(`/api/schedule?channel_idx=${channelIdx}`);
+      if (schedData.current) {
+        episodeInfo = schedData.current.episode;
+        seekTo = 0;
+        torrentId = schedData.current.episode.torrent_id || null;
+      } else {
+        throw new Error('Could not find an episode to play.');
+      }
+    }
+
+    STATE.currentEpisode = episodeInfo;
+    const chName = schedData.channel.channel_name;
+    const chNum = schedData.channel.channel_number;
+
+    // Use pre-cached torrent if available
+    if (torrentId) {
+      await playStream(torrentId, 0, episodeInfo, chName, chNum, seekTo);
+      if (schedData.upcoming && schedData.upcoming.length > 0) showUpNext(schedData.upcoming);
+      return;
+    }
+
+    // Search for this specific episode
+    let epUrl = `/api/random-episode?channel_idx=${channelIdx}&season=${episodeInfo.season}&episode_number=${episodeInfo.episode_number}`;
+    if (episodeInfo.show_name) {
+      epUrl += `&show_name=${encodeURIComponent(episodeInfo.show_name)}`;
+    }
+    const data = await apiCall(epUrl);
+    if (!data.success) {
+      throw new Error(data.detail || 'Failed to find content');
+    }
+
+    await playStream(data.torrent_id, data.file_id || 0, episodeInfo, chName, chNum, seekTo);
+
+    if (schedData.upcoming && schedData.upcoming.length > 0) showUpNext(schedData.upcoming);
+
+  } catch (e) {
+    clearIdleTimer();
+    STATE.mode = 'guide';
+    hideVideoPlayer();
+    hideUpNext();
+    showError(e.message || 'Could not play episode.');
+  }
+}
+
+function showUpNext(upcoming) {
+  let el = document.getElementById('upNext');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'upNext';
+    el.style.cssText = 'position:absolute;bottom:60px;right:16px;z-index:55;background:rgba(0,0,0,0.85);border:1px solid #333;border-radius:6px;padding:8px 12px;color:#aaa;font-size:11px;max-width:250px;';
+    document.getElementById('crtScreen').appendChild(el);
+  }
+  const next = upcoming.slice(0, 3);
+  el.innerHTML = '<div style="color:var(--crt-text);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">📡 Up Next</div>' +
+    next.map(e => {
+      const t = new Date(e.starts_at * 1000);
+      const timeStr = t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return `<div style="margin:2px 0;color:#ccc;">${timeStr} — S${String(e.season).padStart(2,'0')}E${String(e.episode_number).padStart(2,'0')} ${esc(e.name)}</div>`;
+    }).join('');
+  el.style.display = 'block';
+}
+
+function hideUpNext() {
+  const el = document.getElementById('upNext');
+  if (el) el.style.display = 'none';
+}
+
+// ── D-Pad focus handler ──
+function onChannelFocus(idx) {
+  if (STATE.mode !== 'guide') return;
+  STATE.currentChannelIdx = idx;
+  updateChannelDisplay();
+  // Update visual selection without full re-render
+  document.querySelectorAll('.channel-row').forEach((r, i) => {
+    r.classList.toggle('selected', i === idx);
+  });
+}
+
+// ── Fullscreen toggle ──
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ── Idle timer: auto-hide overlays after 5s of no input ──
+function resetIdleTimer() {
+  const screen = document.getElementById('crtScreen');
+  if (!screen) return;
+
+  // Remove idle class to show overlays
+  screen.classList.remove('idle');
+
+  // Clear existing timer
+  if (STATE.idleTimer) clearTimeout(STATE.idleTimer);
+
+  // Set new timer — only auto-hide when actively playing
+  if (STATE.mode === 'playing') {
+    STATE.idleTimer = setTimeout(() => {
+      screen.classList.add('idle');
+    }, 5000);
+  }
+}
+
+function clearIdleTimer() {
+  if (STATE.idleTimer) {
+    clearTimeout(STATE.idleTimer);
+    STATE.idleTimer = null;
+  }
+  const screen = document.getElementById('crtScreen');
+  if (screen) screen.classList.remove('idle');
+}
+
+async function playStream(torrentId, fileId, episodeInfo, channelName, channelNum, seekTo = 0) {
+  STATE.mode = 'loading';
+  showVideoPlayer();
+  dom.videoStatus.classList.add('visible');
+
+  const url = `/api/play?torrent_id=${torrentId}&file_id=${fileId}`;
+  try {
+    const data = await apiCall(url);
+    if (!data.success) {
+      throw new Error(data.detail || 'Failed to create stream');
+    }
+
+    const d = data.data || data;
+    const streamUrl = d.stream_url || d.url || d.link || d.download_link ||
+                      (d.streams && d.streams[0] && d.streams[0].url) ||
+                      (d.qualities && Object.values(d.qualities)[0]);
+
+    if (!streamUrl) {
+      console.error('Stream response:', data);
+      throw new Error('No stream URL found in response.');
+    }
+
+    STATE.streamUrl = streamUrl;
+    STATE.mode = 'playing';
+
+    dom.videoPlayer.src = streamUrl;
+    dom.videoPlayer.play().catch(() => {});
+
+    // Seek to mid-episode position if this is a scheduled airing
+    if (seekTo > 0) {
+      const seekHandler = () => {
+        dom.videoPlayer.currentTime = seekTo;
+        dom.videoPlayer.removeEventListener('loadedmetadata', seekHandler);
+      };
+      dom.videoPlayer.addEventListener('loadedmetadata', seekHandler);
+    }
+
+    dom.videoStatus.classList.remove('visible');
+    dom.nowPlaying.classList.remove('hidden');
+    dom.helpBar.classList.add('hidden');
+
+    const showLabel = episodeInfo && episodeInfo.show_name ? episodeInfo.show_name : '';
+    const epLabel = episodeInfo
+      ? `${showLabel ? showLabel + ' — ' : ''}S${String(episodeInfo.season).padStart(2,'0')}E${String(episodeInfo.episode_number).padStart(2,'0')} — ${episodeInfo.name}`
+      : '';
+
+    dom.npChannel.textContent = channelNum ? `CH ${String(channelNum).padStart(2,'0')}` : 'CH 01';
+    dom.npTitle.textContent = epLabel || channelName || '';
+    dom.channelDisplay.textContent = channelNum ? `CH ${String(channelNum).padStart(2,'0')}` : 'CH 01';
+    dom.channelDisplay.classList.remove('hidden', 'changing');
+
+    // Show overlays + start idle timer for auto-hide
+    resetIdleTimer();
+  } catch (e) {
+    STATE.mode = 'guide';
+    hideVideoPlayer();
+    showError(e.message || 'Could not play this show.');
+  }
+}
+
+async function playShow(torrentId, fileId) {
+  STATE.currentEpisode = null;
+  await playStream(torrentId, fileId, null);
+}
+
+// ── Render ──
+async function renderGuide() {
+  // Fetch guide data for live now/next info
+  let guideData = null;
+  try {
+    guideData = await apiCall('/api/guide');
+  } catch(e) { /* offline, use fallback */ }
+
+  const nowInfo = {};
+  if (guideData && guideData.success) {
+    guideData.channels.forEach(ch => {
+      const cur = ch.current;
+      const up = (ch.upcoming || [])[0];
+      nowInfo[ch.channel_idx] = { current: cur, next: up };
+    });
+  }
+
+  dom.guideChannels.innerHTML = STATE.channels.map((ch, i) => {
+    const info = nowInfo[i];
+    let preview = '';
+    if (info && info.current && info.current.is_live) {
+      const ep = info.current.episode;
+      preview = `▶ ${ep.show_name || ''} — S${String(ep.season).padStart(2,'0')}E${String(ep.episode_number).padStart(2,'0')} ${ep.name}`;
+    } else {
+      preview = (ch.shows && ch.shows.length) ? '📡 Schedule' : '📡 Needs shows';
+    }
+
+    let nextLine = '';
+    if (info && info.next) {
+      const n = info.next;
+      const t = new Date(n.starts_at * 1000);
+      const timeStr = t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      nextLine = `<div class="channel-next-show">${timeStr} — ${n.show_name || ''} S${String(n.season).padStart(2,'0')}E${String(n.episode_number).padStart(2,'0')} ${esc(n.name)}</div>`;
+    }
+
+    return `
+      <div class="channel-row ${i === STATE.currentChannelIdx ? 'selected' : ''}"
+           data-idx="${i}" tabindex="0"
+           onfocus="onChannelFocus(${i})">
+        <div class="channel-number">${String(ch.number || i+1).padStart(2,'0')}</div>
+        <div class="channel-info">
+          <div class="channel-name">${esc(ch.name || 'Unnamed')}</div>
+          <div class="channel-current-show">${esc(preview)}</div>
+          ${nextLine}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Focus the current channel after render
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`.channel-row[data-idx="${STATE.currentChannelIdx}"]`);
+    if (row && STATE.mode === 'guide') row.focus();
+  });
+}
+
+function renderShowBrowser() {
+  const ch = STATE.channels[STATE.currentChannelIdx];
+  if (!ch) return;
+  const torrents = ch.torrents || [];
+
+  dom.browserTitle.textContent = `${esc(ch.name)} — Shows`;
+  if (torrents.length === 0) {
+    dom.showList.innerHTML = '<div style="padding:20px;color:#888;text-align:center;">No content linked to this channel.</div>';
+  } else {
+    dom.showList.innerHTML = torrents.map((t, i) => `
+      <div class="show-item ${i === STATE.currentShowIdx ? 'selected' : ''}"
+           data-idx="${i}">
+        <span class="play-icon">▶</span>
+        <span class="show-name">${esc(t.label || `Item ${i+1}`)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+// ── View Management ──
+function showGuide() {
+  clearIdleTimer();
+  dom.channelDisplay.classList.add('hidden');
+  dom.channelGuide.classList.remove('hidden');
+  dom.showBrowser.classList.add('hidden');
+  dom.videoContainer.classList.add('hidden');
+  dom.nowPlaying.classList.add('hidden');
+  dom.helpBar.classList.remove('hidden');
+  dom.videoPlayer.pause();
+  dom.videoPlayer.src = '';
+  hideUpNext();
+  STATE.mode = 'guide';
+  STATE.streamUrl = null;
+  renderGuide();
+  updateChannelDisplay();
+}
+
+function showBrowser() {
+  clearIdleTimer();
+  dom.channelDisplay.classList.add('hidden');
+  dom.channelGuide.classList.add('hidden');
+  dom.showBrowser.classList.remove('hidden');
+  dom.videoContainer.classList.add('hidden');
+  dom.nowPlaying.classList.add('hidden');
+  STATE.mode = 'browser';
+  STATE.currentShowIdx = 0;
+  renderShowBrowser();
+  updateChannelDisplay();
+}
+
+function showVideoPlayer() {
+  dom.channelGuide.classList.add('hidden');
+  dom.showBrowser.classList.add('hidden');
+  dom.videoContainer.classList.remove('hidden');
+  dom.nowPlaying.classList.add('hidden');
+  dom.helpBar.classList.add('hidden');
+}
+
+function hideVideoPlayer() {
+  dom.videoContainer.classList.add('hidden');
+  dom.nowPlaying.classList.add('hidden');
+  dom.videoPlayer.pause();
+  dom.videoPlayer.src = '';
+}
+
+// ── Channel Display ──
+function updateChannelDisplay() {
+  const ch = STATE.channels[STATE.currentChannelIdx];
+  if (ch) {
+    dom.channelDisplay.textContent = `CH ${String(ch.number).padStart(2,'0')}`;
+  }
+}
+
+function flickerChannel() {
+  dom.channelDisplay.classList.remove('changing');
+  void dom.channelDisplay.offsetWidth;
+  dom.channelDisplay.classList.add('changing');
+}
+
+// ── Static Effect ──
+function triggerStatic(duration = 300) {
+  dom.staticOverlay.classList.add('active');
+  setTimeout(() => {
+    dom.staticOverlay.classList.remove('active');
+  }, duration);
+}
+
+// ── Error ──
+function showError(msg) {
+  dom.errorBanner.textContent = msg;
+  dom.errorBanner.classList.remove('hidden');
+  setTimeout(() => dom.errorBanner.classList.add('hidden'), 4000);
+}
+
+// ── Navigation ──
+function navigateUp() {
+  if (STATE.mode === 'playing') return;
+  if (STATE.channels.length === 0) return;
+
+  if (STATE.mode === 'guide') {
+    STATE.currentChannelIdx = (STATE.currentChannelIdx - 1 + STATE.channels.length) % STATE.channels.length;
+    triggerStatic(150);
+    flickerChannel();
+    renderGuide();
+    updateChannelDisplay();
+  } else if (STATE.mode === 'browser') {
+    STATE.currentChannelIdx = (STATE.currentChannelIdx - 1 + STATE.channels.length) % STATE.channels.length;
+    STATE.currentShowIdx = 0;
+    triggerStatic(150);
+    flickerChannel();
+    renderShowBrowser();
+    updateChannelDisplay();
+  }
+}
+
+function navigateDown() {
+  if (STATE.mode === 'playing') return;
+  if (STATE.channels.length === 0) return;
+
+  if (STATE.mode === 'guide') {
+    STATE.currentChannelIdx = (STATE.currentChannelIdx + 1) % STATE.channels.length;
+    triggerStatic(150);
+    flickerChannel();
+    renderGuide();
+    updateChannelDisplay();
+  } else if (STATE.mode === 'browser') {
+    STATE.currentChannelIdx = (STATE.currentChannelIdx + 1) % STATE.channels.length;
+    STATE.currentShowIdx = 0;
+    triggerStatic(150);
+    flickerChannel();
+    renderShowBrowser();
+    updateChannelDisplay();
+  }
+}
+
+function navigateLeft() {
+  if (STATE.mode === 'playing') return;
+  const ch = STATE.channels[STATE.currentChannelIdx];
+  if (!ch) return;
+
+  // Only for non-random channels with multiple torrents
+  if (STATE.mode === 'browser' && !ch.random_episode) {
+    const torrents = ch.torrents || [];
+    if (torrents.length > 0) {
+      STATE.currentShowIdx = (STATE.currentShowIdx - 1 + torrents.length) % torrents.length;
+      renderShowBrowser();
+    }
+  }
+}
+
+function navigateRight() {
+  if (STATE.mode === 'playing') return;
+  const ch = STATE.channels[STATE.currentChannelIdx];
+  if (!ch) return;
+
+  if (STATE.mode === 'browser' && !ch.random_episode) {
+    const torrents = ch.torrents || [];
+    if (torrents.length > 0) {
+      STATE.currentShowIdx = (STATE.currentShowIdx + 1) % torrents.length;
+      renderShowBrowser();
+    }
+  }
+}
+
+function navigateEnter() {
+  if (STATE.channels.length === 0) return;
+  const ch = STATE.channels[STATE.currentChannelIdx];
+  if (!ch) return;
+
+  if (STATE.mode === 'guide') {
+    if (ch.shows && ch.shows.length) {
+      playFromSchedule(STATE.currentChannelIdx);
+    } else {
+      showError('This channel needs shows added in /admin');
+    }
+  }
+}
+
+function navigateBack() {
+  if (STATE.mode === 'playing' || STATE.mode === 'loading') {
+    // Stop and go to guide
+    showGuide();
+  } else if (STATE.mode === 'browser') {
+    // Back to guide
+    showGuide();
+  }
+}
+
+// ── TV Guide ──
+function navigateGuide() {
+  if (STATE.mode === 'playing') {
+    // While playing, G goes back to channel list
+    showGuide();
+    return;
+  }
+
+  // Toggle between channel list and TV guide
+  const guideEl = document.getElementById('tvGuide');
+  if (guideEl && !guideEl.classList.contains('hidden')) {
+    hideTVGuide();
+  } else {
+    showTVGuide();
+  }
+}
+
+async function showTVGuide() {
+  document.getElementById('tvGuide').classList.remove('hidden');
+  document.getElementById('channelGuide').classList.add('hidden');
+  document.getElementById('helpBar').classList.add('hidden');
+  clearIdleTimer();
+  STATE.mode = 'guide';
+
+  try {
+    const data = await apiCall('/api/guide');
+    if (data.success) {
+      renderTVGuide(data);
+    }
+  } catch(e) {
+    showError('Failed to load TV guide');
+  }
+}
+
+function hideTVGuide() {
+  document.getElementById('tvGuide').classList.add('hidden');
+  showGuide(); // back to channel list
+}
+
+function renderTVGuide(data) {
+  const serverTime = data.server_time || (Date.now() / 1000);
+  const PX_PER_SEC = 1.5; // 1.5px per second for readability
+  const HOUR_WIDTH = 3600 * PX_PER_SEC;
+  const GUIDE_HOURS = 2; // show 2 hours
+
+  // Timeline header
+  const now = serverTime;
+  const startHour = Math.floor(now / 3600) * 3600;
+  const header = document.getElementById('guideTimeline');
+  header.innerHTML = '';
+  for (let h = 0; h < GUIDE_HOURS + 1; h++) {
+    const t = startHour + h * 1800; // every 30 min
+    const x = (t - now) * PX_PER_SEC + 100; // offset from now + left padding
+    const label = new Date(t * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    header.innerHTML += `<div class="time-marker" style="left:${x}px">${label}</div>`;
+  }
+
+  // Channel rows
+  let rowsHTML = '';
+  data.channels.forEach((ch, idx) => {
+    const blocksHTML = [];
+    const timelineStart = now - 300; // 5 min before now
+
+    // Current episode block
+    if (ch.current) {
+      const ep = ch.current.episode;
+      const starts = ep.starts_at || (now - 600);
+      const ends = ep.ends_at || (now + 600);
+      const left = Math.max(0, (starts - timelineStart) * PX_PER_SEC);
+      const width = Math.max(40, (ends - starts) * PX_PER_SEC);
+      const isLive = ch.current.is_live;
+      blocksHTML.push(`
+        <div class="guide-show-block ${isLive ? 'live' : ''}"
+             style="left:${left}px;width:${width}px"
+             onclick="tuneToChannel(${ch.channel_idx})">
+          <div class="block-title">${esc(ep.show_name || ch.channel_name)}</div>
+          <div class="block-ep">S${String(ep.season).padStart(2,'0')}E${String(ep.episode_number).padStart(2,'0')} ${esc(ep.name)}</div>
+        </div>`);
+    }
+
+    // Upcoming blocks
+    (ch.upcoming || []).forEach(ep => {
+      const starts = ep.starts_at;
+      const ends = ep.ends_at || (starts + 1320);
+      const left = Math.max(0, (starts - timelineStart) * PX_PER_SEC);
+      const width = Math.max(40, (ends - starts) * PX_PER_SEC);
+      blocksHTML.push(`
+        <div class="guide-show-block"
+             style="left:${left}px;width:${width}px"
+             onclick="tuneToChannel(${ch.channel_idx})">
+          <div class="block-title">${esc(ep.show_name || ch.channel_name)}</div>
+          <div class="block-ep">S${String(ep.season).padStart(2,'0')}E${String(ep.episode_number).padStart(2,'0')} ${esc(ep.name)}</div>
+        </div>`);
+    });
+
+    rowsHTML += `
+      <div class="guide-row" data-ch="${ch.channel_idx}">
+        <div class="ch-label">
+          <span class="ch-num">${String(ch.channel_number).padStart(2,'0')}</span>
+          <span class="ch-name">${esc(ch.channel_name)}</span>
+        </div>
+        <div class="ch-timeline">${blocksHTML.join('')}</div>
+      </div>`;
+  });
+
+  document.getElementById('guideRows').innerHTML = rowsHTML;
+
+  // Position the now-line
+  const nowLine = document.getElementById('guideNowLine');
+  const leftPx = 100 + 300 * PX_PER_SEC; // padding + 5min buffer
+  nowLine.style.left = leftPx + 'px';
+}
+
+function tuneToChannel(channelIdx) {
+  hideTVGuide();
+  STATE.currentChannelIdx = channelIdx;
+  updateChannelDisplay();
+  navigateEnter();
+}
+
+let guideSelectedRow = 0;
+function guideMoveChannel(dir) {
+  const rows = document.querySelectorAll('#guideRows .guide-row');
+  if (!rows.length) return;
+  rows.forEach(r => r.classList.remove('selected'));
+  guideSelectedRow = Math.max(0, Math.min(rows.length - 1, guideSelectedRow + dir));
+  rows[guideSelectedRow].classList.add('selected');
+  rows[guideSelectedRow].scrollIntoView({ block: 'nearest' });
+}
+
+function guideScrollTime(offset) {
+  const scroll = document.getElementById('guideChannelsScroll');
+  scroll.scrollLeft += offset;
+}
+
+function guideSelectChannel() {
+  const row = document.querySelector('#guideRows .guide-row.selected');
+  if (row) {
+    const chIdx = parseInt(row.dataset.ch);
+    if (!isNaN(chIdx)) tuneToChannel(chIdx);
+  }
+}
+
+// ── Keyboard Handler ──
+document.addEventListener('keydown', (e) => {
+  // Reset idle timer on any key (shows overlays when playing)
+  resetIdleTimer();
+
+  // Don't capture when user is typing in an input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // TV Guide mode: arrow keys for guide navigation
+  const guideEl = document.getElementById('tvGuide');
+  if (guideEl && !guideEl.classList.contains('hidden')) {
+    switch (e.key) {
+      case 'ArrowUp':   guideMoveChannel(-1); e.preventDefault(); return;
+      case 'ArrowDown': guideMoveChannel(1); e.preventDefault(); return;
+      case 'ArrowLeft': guideScrollTime(-300); e.preventDefault(); return;
+      case 'ArrowRight':guideScrollTime(300); e.preventDefault(); return;
+      case 'Enter':     guideSelectChannel(); e.preventDefault(); return;
+      case 'Backspace':
+      case 'Escape':    hideTVGuide(); e.preventDefault(); return;
+      case 'g':
+      case 'G':         hideTVGuide(); e.preventDefault(); return;
+    }
+    return;
+  }
+
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'ArrowDown':
+    case 'ArrowLeft':
+    case 'ArrowRight':
+    case 'Enter':
+    case 'Backspace':
+    case 'Escape':
+      e.preventDefault();
+      break;
+  }
+
+  switch (e.key) {
+    case 'ArrowUp':    navigateUp(); break;
+    case 'ArrowDown':  navigateDown(); break;
+    case 'ArrowLeft':  navigateLeft(); break;
+    case 'ArrowRight': navigateRight(); break;
+    case 'Enter':      navigateEnter(); break;
+    case 'Backspace':
+    case 'Escape':     navigateBack(); break;
+    case 'g':
+    case 'G':          navigateGuide(); break;
+    case 'f':
+    case 'F':          toggleFullscreen(); break;
+  }
+});
+
+// ── Click Navigation (channel rows in guide) ──
+dom.guideChannels.addEventListener('click', (e) => {
+  const row = e.target.closest('.channel-row');
+  if (!row) return;
+  STATE.currentChannelIdx = parseInt(row.dataset.idx);
+  renderGuide();
+  updateChannelDisplay();
+  navigateEnter();
+});
+
+// ── Click Navigation (show items in browser) ──
+dom.showList.addEventListener('click', (e) => {
+  const item = e.target.closest('.show-item');
+  if (!item) return;
+  STATE.currentShowIdx = parseInt(item.dataset.idx);
+  renderShowBrowser();
+  navigateEnter(); // play
+});
+
+// ── Video events ──
+dom.videoPlayer.addEventListener('error', () => {
+  if (STATE.mode === 'playing') {
+    showError('Video playback error. The stream may have expired.');
+    showGuide();
+  }
+});
+
+dom.videoPlayer.addEventListener('ended', () => {
+  STATE.mode = 'guide';
+  showGuide();
+});
+
+dom.videoPlayer.addEventListener('loadeddata', () => {
+  dom.videoStatus.classList.remove('visible');
+});
+
+// Auto-enable English subtitles when available
+dom.videoPlayer.addEventListener('loadedmetadata', () => {
+  const tracks = dom.videoPlayer.textTracks;
+  if (!tracks || !tracks.length) return;
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    if (t.kind === 'subtitles' || t.kind === 'captions') {
+      const label = (t.label || '').toLowerCase();
+      const lang = (t.language || '').toLowerCase();
+      if (lang === 'en' || lang.startsWith('en') || label.includes('english') || label.includes('eng')) {
+        t.mode = 'showing';
+        break;
+      }
+    }
+    // If no English found, enable the first subtitle track anyway
+    if (i === tracks.length - 1) {
+      for (let j = 0; j < tracks.length; j++) {
+        if (tracks[j].kind === 'subtitles' || tracks[j].kind === 'captions') {
+          tracks[j].mode = 'showing';
+          break;
+        }
+      }
+    }
+  }
+});
+
+// ── Init ──
+function init() {
+  // Register service worker for PWA/offline support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  loadChannels().then(() => {
+    showGuide();
+
+    // Check for API keys — must be inside .then() since loadChannels is async
+    if (!STATE.hasTorboxKey) {
+      showError('⚠️ Set your TorBox API key in /admin!');
+    } else if (!STATE.hasTvdbKey) {
+      setTimeout(() => {
+        showError('💡 Set a TVDB API key in /admin for random episodes');
+      }, 500);
+    }
+  });
+  updateChannelDisplay();
+}
+
+init();
+</script>
+
+</body>
+</html>

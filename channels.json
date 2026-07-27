@@ -1,0 +1,49 @@
+{
+  "channels": [
+    {
+      "number": 1,
+      "name": "Comfort Shows",
+      "logo": "NC",
+      "random_episode": false,
+      "season_filter": null,
+      "shows": [
+        {
+          "tvdb_id": 84912,
+          "name": "Parks and Recreation"
+        },
+        {
+          "tvdb_id": 79216,
+          "name": "The IT Crowd"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Adult Swim",
+      "logo": "AS",
+      "shows": [
+        {
+          "tvdb_id": 267996,
+          "name": "Yu-Gi-Oh! Capsule Monsters"
+        },
+        {
+          "tvdb_id": 73903,
+          "name": "King of the Hill"
+        },
+        {
+          "tvdb_id": 73871,
+          "name": "Futurama"
+        },
+        {
+          "tvdb_id": 79171,
+          "name": "Space Ghost Coast to Coast"
+        },
+        {
+          "tvdb_id": 110381,
+          "name": "Archer (2009)"
+        }
+      ],
+      "season_filter": null
+    }
+  ]
+}
